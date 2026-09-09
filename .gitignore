@@ -1,0 +1,48 @@
+# Python Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Model artifacts and checkpoints
+models/*.joblib
+models/*.pkl
+models/*.onnx
+
+# Evaluation / experiment outputs (keep folder, ignore generated plots/reports)
+results/*
+!results/.gitkeep
+
+# Environment variables & secrets
+.env
+.env.local
+
+# IDE configuration
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# Note: data/ directory is explicitly tracked for datasets (training.csv, validating.csv)
+!data/
