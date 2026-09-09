@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>DNS Tunneling Detection - Day 1 Executive Overview</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 18mm 16mm 18mm 16mm;
+            @bottom-right {
+                content: counter(page);
+            }
+        }
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+            color: #1a202c;
+            line-height: 1.55;
+            font-size: 11pt;
+            margin: 0;
+            padding: 0;
+            background: #fff;
+        }
+        .header {
+            border-bottom: 3px solid #2b6cb0;
+            padding-bottom: 12px;
+            margin-bottom: 22px;
+        }
+        .project-badge {
+            display: inline-block;
+            background: #ebf8ff;
+            color: #2b6cb0;
+            padding: 4px 10px;
+            font-size: 9pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-radius: 4px;
+            border: 1px solid #bee3f8;
+            margin-bottom: 6px;
+        }
+        h1 {
+            font-size: 22pt;
+            color: #2d3748;
+            margin: 4px 0 6px 0;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        .subtitle {
+            font-size: 12pt;
+            color: #4a5568;
+            margin: 0 0 10px 0;
+        }
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            background: #f7fafc;
+            padding: 10px 14px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+            font-size: 9.5pt;
+        }
+        .meta-item strong {
+            color: #2d3748;
+            display: block;
+            font-size: 8.5pt;
+            text-transform: uppercase;
+            color: #718096;
+            margin-bottom: 2px;
+        }
+        h2 {
+            font-size: 13pt;
+            color: #2b6cb0;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 4px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        h3 {
+            font-size: 11pt;
+            color: #2d3748;
+            margin-top: 14px;
+            margin-bottom: 6px;
+        }
+        p {
+            margin: 0 0 10px 0;
+            text-align: justify;
+        }
+        .callout {
+            background: #ebf8ff;
+            border-left: 4px solid #3182ce;
+            padding: 10px 14px;
+            border-radius: 0 6px 6px 0;
+            margin: 12px 0;
+            font-size: 10pt;
+        }
+        .callout-success {
+            background: #f0fff4;
+            border-left: 4px solid #38a169;
+            padding: 10px 14px;
+            border-radius: 0 6px 6px 0;
+            margin: 12px 0;
+            font-size: 10pt;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+            font-size: 9.5pt;
+        }
+        th, td {
+            border: 1px solid #cbd5e0;
+            padding: 7px 10px;
+            text-align: left;
+        }
+        th {
+            background: #edf2f7;
+            color: #2d3748;
+            font-weight: 600;
+        }
+        tr:nth-child(even) {
+            background: #f7fafc;
+        }
+        .badge-pass {
+            background: #c6f6d5;
+            color: #22543d;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 700;
+            font-size: 8.5pt;
+        }
+        .code-box {
+            background: #2d3748;
+            color: #f7fafc;
+            padding: 10px 12px;
+            border-radius: 5px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 8.5pt;
+            line-height: 1.4;
+            white-space: pre;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        .page-break {
+            page-break-before: always;
+        }
+        ul, ol {
+            margin: 0 0 10px 0;
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 4px;
+        }
+        .footer {
+            margin-top: 25px;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 8px;
+            font-size: 8.5pt;
+            color: #a0aec0;
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Section -->
+    <div class="header">
+        <span class="project-badge">Academic ML Project Report</span>
+        <h1>DNS Tunneling Detection System</h1>
+        <div class="subtitle">Day 1 Project Initialization, Environment & Architectural Overview</div>
+        
+        <div class="meta-grid">
+            <div class="meta-item">
+                <strong>Project Phase</strong>
+                Day 1: Setup &amp; Verification
+            </div>
+            <div class="meta-item">
+                <strong>Python Version</strong>
+                Python 3.12.10 (64-bit)
+            </div>
+            <div class="meta-item">
+                <strong>Target Platform</strong>
+                Windows (Local Virtualenv)
+            </div>
+            <div class="meta-item">
+                <strong>Overall Status</strong>
+                <span class="badge-pass">100% PASS</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Executive Summary -->
+    <h2>1. Executive Summary</h2>
+    <p>
+        <strong>DNS Tunneling</strong> is an advanced cyber-attack technique that abuses the Domain Name System (DNS, UDP/TCP port 53) to exfiltrate confidential enterprise data or transmit malicious Command &amp; Control (C2) payloads through standard network firewalls. Because DNS queries are critical for standard internet browsing and network discovery, port 53 is almost universally permitted outward, making it an attractive covert channel for adversaries.
+    </p>
+    <p>
+        The objective of this research project is to develop an <strong>end-to-end Machine Learning pipeline</strong> that distinguishes benign domain traffic from malicious DNS tunneling queries by analyzing lexical structure, statistical character distributions, and <strong>Shannon Entropy</strong>.
+    </p>
+    <div class="callout-success">
+        <strong>Day 1 Objective:</strong> Establish a robust, reproducible, and isolated development environment, construct the modular software architecture, configure version control, and confirm that all necessary scientific libraries function without error before building model components.
+    </div>
+
+    <!-- What Was Accomplished -->
+    <h2>2. Day 1 Milestones &amp; Accomplishments</h2>
+    <ul>
+        <li><strong>Python 3.12 Installation:</strong> Verified the absence of Python 3.12, obtained explicit authorization, and performed a clean installation of <strong>Python 3.12.10 (64-bit)</strong>.</li>
+        <li><strong>Dedicated Workspace:</strong> Initialized the root project directory on the Desktop: <code>C:\Users\arath\Desktop\DNS-Tunneling-Detection</code>.</li>
+        <li><strong>Virtual Environment (<code>venv</code>):</strong> Created an isolated Python 3.12 virtual environment to guarantee dependency isolation and prevent global system package conflicts.</li>
+        <li><strong>Package Installation:</strong> Successfully resolved and installed all primary data science, machine learning, and explainability libraries via <code>pip</code>.</li>
+        <li><strong>Modular Architecture (<code>src/</code>):</strong> Created 8 distinct Python modules with clear academic docstrings defining the upcoming machine learning lifecycle.</li>
+        <li><strong>Git Version Control:</strong> Initialized a local Git repository and created the baseline commit (<code>c9d7e48</code>), specifically ensuring that the <code>data/</code> folder is preserved for dataset placement.</li>
+        <li><strong>Automated Verification:</strong> Created and executed <code>main.py</code>, testing environment variables, package imports, module syntax, and directory layout with zero errors.</li>
+    </ul>
+
+    <!-- Project Structure -->
+    <h2>3. Project Directory Architecture</h2>
+    <p>The workspace adheres to standard academic and industry ML engineering practices:</p>
+    <div class="code-box">DNS-Tunneling-Detection/
+├── data/                  # Raw headerless datasets (training.csv & validating.csv)
+├── src/                   # Core pipeline modules
+│   ├── __init__.py        # Package initialization
+│   ├── data_loader.py     # Reads headerless CSVs into pandas DataFrames
+│   ├── preprocessing.py  # Cleans, normalizes, and validates domain strings
+│   ├── feature_extraction.py # Extracts lexical & character distribution metrics
+│   ├── entropy.py         # Computes Shannon Entropy (degree of payload randomness)
+│   ├── train_models.py    # Trains classification models (Random Forest, etc.)
+│   ├── evaluate.py        # Computes Precision, Recall, F1, ROC-AUC & Confusion Matrix
+│   └── explainability.py  # Generates SHAP explainable AI interpretability plots
+├── models/                # Serialized model pipelines (.joblib)
+├── results/               # Generated evaluation charts, metrics, and figures
+├── notebooks/             # Interactive Jupyter exploration notebooks
+├── venv/                  # Isolated Python 3.12.10 virtual environment
+├── main.py                # Day 1 verification entry point & diagnostic script
+├── requirements.txt       # Version-locked dependency manifest
+├── README.md              # Academic documentation and architecture reference
+└── .gitignore             # Tracks data/ while excluding large binaries & venv</div>
+
+    <div class="page-break"></div>
+
+    <!-- Source Modules Breakdown -->
+    <h2>4. Modular Pipeline Breakdown (<code>src/</code>)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 25%;">Module Name</th>
+                <th style="width: 35%;">Future Responsibility</th>
+                <th style="width: 40%;">Cybersecurity / Academic Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>data_loader.py</code></td>
+                <td>Ingests <code>training.csv</code> (15,000) and <code>validating.csv</code> (5,000).</td>
+                <td>Loads headerless data, maps Column 0 to Label and Column 1 to Domain name.</td>
+            </tr>
+            <tr>
+                <td><code>preprocessing.py</code></td>
+                <td>Normalizes domains (lowercasing, trimming root dots, validating strings).</td>
+                <td>Ensures clean, robust text inputs and eliminates corrupted entries.</td>
+            </tr>
+            <tr>
+                <td><code>feature_extraction.py</code></td>
+                <td>Extracts domain lengths, subdomain counts, digit ratios, consonant-vowel ratios.</td>
+                <td>Translates raw domain queries into numerical features for machine learning.</td>
+            </tr>
+            <tr>
+                <td><code>entropy.py</code></td>
+                <td>Computes <strong>Shannon Entropy</strong>: \( H(X) = -\sum P(x) \log_2 P(x) \).</td>
+                <td>Key discriminator: Encoded tunneling payloads show high entropy vs. benign text.</td>
+            </tr>
+            <tr>
+                <td><code>train_models.py</code></td>
+                <td>Trains classifiers (Random Forest, Logistic Regression) &amp; saves via <code>joblib</code>.</td>
+                <td>Evaluates ensemble learning effectiveness against adversarial evasions.</td>
+            </tr>
+            <tr>
+                <td><code>evaluate.py</code></td>
+                <td>Calculates Accuracy, Precision, Recall, F1-Score, and Confusion Matrix.</td>
+                <td>Prioritizes high Recall (catching threats) and low False Positives.</td>
+            </tr>
+            <tr>
+                <td><code>explainability.py</code></td>
+                <td>Computes SHAP (SHapley Additive exPlanations) values and plots.</td>
+                <td>Defeats the "black-box" dilemma by demonstrating why an alert fired.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Dataset Specifications -->
+    <h2>5. Dataset Specifications (Headerless)</h2>
+    <p>
+        The model will be trained and evaluated on two dedicated, headerless datasets situated inside the <code>data/</code> directory:
+    </p>
+    <table>
+        <thead>
+            <tr>
+                <th>Dataset Name</th>
+                <th>Record Count</th>
+                <th>Columns</th>
+                <th>Column 0 (Ground Truth Label)</th>
+                <th>Column 1 (Feature String)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>training.csv</code></td>
+                <td><strong>15,000</strong> records</td>
+                <td>2 columns (Headerless)</td>
+                <td><code>0</code> = Regular / Benign Domain<br><code>1</code> = DNS Tunneling Attack</td>
+                <td>Domain query string<br>(e.g., <code>example.com</code>)</td>
+            </tr>
+            <tr>
+                <td><code>validating.csv</code></td>
+                <td><strong>5,000</strong> records</td>
+                <td>2 columns (Headerless)</td>
+                <td><code>0</code> = Regular / Benign Domain<br><code>1</code> = DNS Tunneling Attack</td>
+                <td>Domain query string<br>(e.g., <code>hexpayload.tunnel.xyz</code>)</td>
+            </tr>
+        </tbody>
+    </table>
+    <div class="callout">
+        <strong>Academic Note:</strong> Keeping the datasets strictly headerless avoids manual data tampering. The <code>data_loader.py</code> script programmatically assigns column headers (<code>['label', 'domain']</code>) during ingestion.
+    </div>
+
+    <!-- Installed Dependencies -->
+    <h2>6. Installed Software Environment</h2>
+    <p>All dependencies have been successfully installed inside <code>venv</code> and documented in <code>requirements.txt</code>:</p>
+    <table>
+        <thead>
+            <tr>
+                <th>Library</th>
+                <th>Version</th>
+                <th>Purpose in Project</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td><strong>Python</strong></td><td><code>3.12.10</code></td><td>Base runtime interpreter</td></tr>
+            <tr><td><strong>pandas</strong></td><td><code>3.0.5</code></td><td>Data manipulation &amp; tabular analysis</td></tr>
+            <tr><td><strong>numpy</strong></td><td><code>2.5.3</code></td><td>Numerical computing &amp; vector arrays</td></tr>
+            <tr><td><strong>scikit-learn</strong></td><td><code>1.9.0</code></td><td>ML algorithms, cross-validation, and metrics</td></tr>
+            <tr><td><strong>shap</strong></td><td><code>0.52.0</code></td><td>Explainable AI (feature importance &amp; reasoning)</td></tr>
+            <tr><td><strong>matplotlib</strong></td><td><code>3.11.1</code></td><td>Foundational plotting engine</td></tr>
+            <tr><td><strong>seaborn</strong></td><td><code>0.13.2</code></td><td>Statistical visualization &amp; heatmaps</td></tr>
+            <tr><td><strong>joblib</strong></td><td><code>1.6.0</code></td><td>Model serialization and disk persistence</td></tr>
+        </tbody>
+    </table>
+
+    <div class="page-break"></div>
+
+    <!-- Verification Output -->
+    <h2>7. Verification &amp; Diagnostic Results</h2>
+    <p>The verification script (<code>main.py</code>) was executed inside the virtual environment. All checks passed with 100% conformity:</p>
+
+    <div class="code-box">=================================================================
+      DNS TUNNELING DETECTION - DAY 1 SETUP VERIFICATION        
+=================================================================
+1. Python Environment Check
+  Python Version:     3.12.10
+  Executable Path:    ...\DNS-Tunneling-Detection\venv\Scripts\python.exe
+  In Virtual Env:     [YES] (venv active)
+  Status:             [PASS] Compatible Python 3.12 detected.
+
+2. Required Packages Check
+  - pandas           : [INSTALLED] (v3.0.5)
+  - numpy            : [INSTALLED] (v2.5.3)
+  - scikit-learn     : [INSTALLED] (v1.9.0)
+  - shap             : [INSTALLED] (v0.52.0)
+  - matplotlib       : [INSTALLED] (v3.11.1)
+  - seaborn          : [INSTALLED] (v0.13.2)
+  - joblib           : [INSTALLED] (v1.6.0)
+
+3. Project Directory Structure Check
+  Checking Directories:
+    [OK] data/   [OK] src/   [OK] models/   [OK] results/   [OK] notebooks/
+  Checking Files:
+    [OK] requirements.txt   [OK] README.md   [OK] .gitignore   [OK] main.py
+    [OK] 8 Python modules in src/
+
+4. Source Modules Import & Syntax Check
+    [OK] src.data_loader            (valid syntax)
+    [OK] src.preprocessing          (valid syntax)
+    [OK] src.feature_extraction     (valid syntax)
+    [OK] src.entropy                (valid syntax)
+    [OK] src.train_models           (valid syntax)
+    [OK] src.evaluate               (valid syntax)
+    [OK] src.explainability         (valid syntax)
+
+Summary & Verification Verdict:
+  [SUCCESS] All Day 1 setup verification checks PASSED!
+  The project environment and architecture are ready for Day 2.
+=================================================================</div>
+
+    <!-- Project Roadmap -->
+    <h2>8. Full Project Roadmap (6-Day Plan)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 15%;">Phase</th>
+                <th style="width: 25%;">Milestone Name</th>
+                <th style="width: 45%;">Key Deliverables</th>
+                <th style="width: 15%;">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Day 1</strong></td>
+                <td><strong>Environment &amp; Setup</strong></td>
+                <td>Python 3.12 venv, directory architecture, Git repo, Day 1 verification.</td>
+                <td><span class="badge-pass">COMPLETED</span></td>
+            </tr>
+            <tr>
+                <td><strong>Day 2</strong></td>
+                <td><strong>Data Loading &amp; Prep</strong></td>
+                <td>Read <code>training.csv</code> (15k) &amp; <code>validating.csv</code> (5k), check balance, clean strings.</td>
+                <td><em>Upcoming</em></td>
+            </tr>
+            <tr>
+                <td><strong>Day 3</strong></td>
+                <td><strong>Feature Engineering</strong></td>
+                <td>Compute Shannon Entropy, domain lengths, subdomain counts, character ratios.</td>
+                <td><em>Upcoming</em></td>
+            </tr>
+            <tr>
+                <td><strong>Day 4</strong></td>
+                <td><strong>Model Training</strong></td>
+                <td>Train Random Forest &amp; Logistic Regression models; serialize with <code>joblib</code>.</td>
+                <td><em>Upcoming</em></td>
+            </tr>
+            <tr>
+                <td><strong>Day 5</strong></td>
+                <td><strong>Model Evaluation</strong></td>
+                <td>Assess Accuracy, Precision, Recall, ROC-AUC, generate Confusion Matrix plot.</td>
+                <td><em>Upcoming</em></td>
+            </tr>
+            <tr>
+                <td><strong>Day 6</strong></td>
+                <td><strong>Explainability (SHAP)</strong></td>
+                <td>Compute SHAP global and local importance plots to explain classifications.</td>
+                <td><em>Upcoming</em></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <span>DNS Tunneling Detection Project &mdash; Day 1 Progress Summary</span>
+        <span>Prepared for Academic &amp; Departmental Review</span>
+    </div>
+
+</body>
+</html>
