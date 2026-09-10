@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>DNS Tunneling Detection - Day 2 Executive Overview</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 18mm 16mm 18mm 16mm;
+            @bottom-right {
+                content: counter(page);
+            }
+        }
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+            color: #1a202c;
+            line-height: 1.55;
+            font-size: 11pt;
+            margin: 0;
+            padding: 0;
+            background: #fff;
+        }
+        .header {
+            border-bottom: 3px solid #2b6cb0;
+            padding-bottom: 12px;
+            margin-bottom: 22px;
+        }
+        .project-badge {
+            display: inline-block;
+            background: #ebf8ff;
+            color: #2b6cb0;
+            padding: 4px 10px;
+            font-size: 9pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-radius: 4px;
+            border: 1px solid #bee3f8;
+            margin-bottom: 6px;
+        }
+        h1 {
+            font-size: 22pt;
+            color: #2d3748;
+            margin: 4px 0 6px 0;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        .subtitle {
+            font-size: 12pt;
+            color: #4a5568;
+            margin: 0 0 10px 0;
+        }
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            background: #f7fafc;
+            padding: 10px 14px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+            font-size: 9.5pt;
+        }
+        .meta-item strong {
+            display: block;
+            font-size: 8.5pt;
+            text-transform: uppercase;
+            color: #718096;
+            margin-bottom: 2px;
+        }
+        h2 {
+            font-size: 13pt;
+            color: #2b6cb0;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 4px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        h3 {
+            font-size: 11pt;
+            color: #2d3748;
+            margin-top: 14px;
+            margin-bottom: 6px;
+        }
+        p {
+            margin: 0 0 10px 0;
+            text-align: justify;
+        }
+        .callout {
+            background: #ebf8ff;
+            border-left: 4px solid #3182ce;
+            padding: 10px 14px;
+            border-radius: 0 6px 6px 0;
+            margin: 12px 0;
+            font-size: 10pt;
+        }
+        .callout-success {
+            background: #f0fff4;
+            border-left: 4px solid #38a169;
+            padding: 10px 14px;
+            border-radius: 0 6px 6px 0;
+            margin: 12px 0;
+            font-size: 10pt;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+            font-size: 9.5pt;
+        }
+        th, td {
+            border: 1px solid #cbd5e0;
+            padding: 7px 10px;
+            text-align: left;
+        }
+        th {
+            background: #edf2f7;
+            color: #2d3748;
+            font-weight: 600;
+        }
+        tr:nth-child(even) {
+            background: #f7fafc;
+        }
+        .badge-pass {
+            background: #c6f6d5;
+            color: #22543d;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 700;
+            font-size: 8.5pt;
+        }
+        .code-box {
+            background: #2d3748;
+            color: #f7fafc;
+            padding: 10px 12px;
+            border-radius: 5px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 8.5pt;
+            line-height: 1.4;
+            white-space: pre;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        .page-break {
+            page-break-before: always;
+        }
+        ul, ol {
+            margin: 0 0 10px 0;
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 4px;
+        }
+        .footer {
+            margin-top: 25px;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 8px;
+            font-size: 8.5pt;
+            color: #a0aec0;
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Section -->
+    <div class="header">
+        <span class="project-badge">Academic ML Project Report &mdash; Phase 2</span>
+        <h1>DNS Tunneling Detection System</h1>
+        <div class="subtitle">Day 2 Data Ingestion, Domain Sanitization &amp; Quality Validation Overview</div>
+        
+        <div class="meta-grid">
+            <div class="meta-item">
+                <strong>Project Phase</strong>
+                Day 2: Ingestion &amp; Prep
+            </div>
+            <div class="meta-item">
+                <strong>Records Analyzed</strong>
+                20,000 (15k Train + 5k Val)
+            </div>
+            <div class="meta-item">
+                <strong>Target Platform</strong>
+                Python 3.12 (Local Venv)
+            </div>
+            <div class="meta-item">
+                <strong>Validation Status</strong>
+                <span class="badge-pass">100% PASS</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Executive Summary -->
+    <h2>1. Executive Summary</h2>
+    <p>
+        Machine learning models are strictly bounded by data quality ("garbage in, garbage out"). In cybersecurity detection systems, raw network traffic often contains DNS protocol artifacts&mdash;such as the trailing root-dot delimiter specified in RFC 1034/1035 (e.g., <code>example.com.</code>)&mdash;and irregularities that can artificially skew feature engineering metrics.
+    </p>
+    <p>
+        The objective of <strong>Day 2</strong> was to ingest the raw, headerless datasets, implement a robust domain sanitization algorithm, enforce strict binary-label integrity, conduct comprehensive quality validations, and evaluate class balance and textual length characteristics before entering the feature extraction phase.
+    </p>
+    <div class="callout-success">
+        <strong>Day 2 Verdict:</strong> All 20,000 records across the training and validation sets were successfully ingested, cleanly sanitized, and validated with <strong>zero missing values</strong>, <strong>zero empty strings</strong>, and an exact <strong>80% Tunnel / 20% Benign class distribution</strong>.
+    </div>
+
+    <!-- What Was Accomplished -->
+    <h2>2. Day 2 Milestones &amp; Key Deliverables</h2>
+    <ul>
+        <li><strong>Headerless Ingestion (<code>src/data_loader.py</code>):</strong> Implemented <code>load_dataset()</code> to programmatically map Column 0 to <code>label</code> and Column 1 to <code>domain</code> without altering raw CSV files.</li>
+        <li><strong>Deterministic Sanitization (<code>src/preprocessing.py</code>):</strong> Implemented <code>clean_domain()</code> to strip whitespace and remove trailing root-dots while strictly preserving internal subdomain dots.</li>
+        <li><strong>Integrity &amp; Binary Validation:</strong> Verified exact dataset dimensions (15,000 training, 5,000 validation) and confirmed all labels are strictly binary (<code>0</code> or <code>1</code>).</li>
+        <li><strong>Missing Values &amp; Duplicate Audit:</strong> Verified 0 missing labels, 0 missing domains, 0 empty strings, and audited duplicate domain records (28 in train, 8 in validation).</li>
+        <li><strong>Class Balance Confirmation:</strong> Dynamically computed class counts, confirming both datasets reflect an expected 80% DNS Tunnel vs. 20% Benign domain distribution.</li>
+        <li><strong>Textual Length Profiling:</strong> Evaluated minimum, maximum, mean, and median character lengths to establish a baseline for upcoming feature extraction.</li>
+        <li><strong>Updated Pipeline Orchestrator (<code>main.py</code>):</strong> Integrated the end-to-end Day 2 verification pipeline with beginner-friendly, academic-grade terminal diagnostics.</li>
+    </ul>
+
+    <!-- Dataset Structure Table -->
+    <h2>3. Ingested Dataset Specifications</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 20%;">Dataset</th>
+                <th style="width: 15%;">Total Records</th>
+                <th style="width: 25%;">Column 0 (Label)</th>
+                <th style="width: 25%;">Column 1 (Domain)</th>
+                <th style="width: 15%;">Format</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>training.csv</code></td>
+                <td><strong>15,000</strong> rows</td>
+                <td><code>0</code> = Benign, <code>1</code> = DNS Tunnel</td>
+                <td>Raw domain query string</td>
+                <td>Headerless CSV</td>
+            </tr>
+            <tr>
+                <td><code>validating.csv</code></td>
+                <td><strong>5,000</strong> rows</td>
+                <td><code>0</code> = Benign, <code>1</code> = DNS Tunnel</td>
+                <td>Raw domain query string</td>
+                <td>Headerless CSV</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="page-break"></div>
+
+    <!-- Domain Sanitization Logic -->
+    <h2>4. Domain Sanitization Logic (<code>src/preprocessing.py</code>)</h2>
+    <p>
+        The <code>clean_domain()</code> function applies a 4-step deterministic transformation:
+    </p>
+    <ol>
+        <li><strong>Type Safety:</strong> Safely casts non-null values to strings.</li>
+        <li><strong>Whitespace Stripping:</strong> Strips leading and trailing spaces (<code>.strip()</code>).</li>
+        <li><strong>Whitespace Collapsing:</strong> Normalizes irregular internal spacing (<code>" ".join(s.split())</code>).</li>
+        <li><strong>Trailing Root-Dot Stripping:</strong> Removes trailing root-zone dot delimiters (<code>.rstrip(".")</code>). Internal dots separating labels are strictly preserved.</li>
+    </ol>
+
+    <h3>Verification Samples (Before vs. After Cleaning):</h3>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 8%;">#</th>
+                <th style="width: 42%;">Raw Input (Before Cleaning)</th>
+                <th style="width: 40%;">Sanitized Output (After Cleaning)</th>
+                <th style="width: 10%;">Result</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1</td>
+                <td><code>q+Z8AnwaBA.hidemyself.org.</code></td>
+                <td><code>q+Z8AnwaBA.hidemyself.org</code></td>
+                <td><span class="badge-pass">CLEAN</span></td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td><code>q+Z8A3wbBA.hidemyself.org.</code></td>
+                <td><code>q+Z8A3wbBA.hidemyself.org</code></td>
+                <td><span class="badge-pass">CLEAN</span></td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td><code>q+Z8BHwcBA.hidemyself.org.</code></td>
+                <td><code>q+Z8BHwcBA.hidemyself.org</code></td>
+                <td><span class="badge-pass">CLEAN</span></td>
+            </tr>
+            <tr>
+                <td>4</td>
+                <td><code>q+Z8BXwdBA.hidemyself.org.</code></td>
+                <td><code>q+Z8BXwdBA.hidemyself.org</code></td>
+                <td><span class="badge-pass">CLEAN</span></td>
+            </tr>
+            <tr>
+                <td>5</td>
+                <td><code>q+Z8BnweCORdAGL4+W7DB...hidemyself.org.</code></td>
+                <td><code>q+Z8BnweCORdAGL4+W7DB...hidemyself.org</code></td>
+                <td><span class="badge-pass">CLEAN</span></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Data Quality Audit -->
+    <h2>5. Data Quality &amp; Integrity Audit</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Quality Dimension</th>
+                <th>Training Set (15,000)</th>
+                <th>Validation Set (5,000)</th>
+                <th>Academic Evaluation</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Record Count</strong></td>
+                <td>15,000 (Exact)</td>
+                <td>5,000 (Exact)</td>
+                <td><span class="badge-pass">PASS</span> Matches expected dimensions</td>
+            </tr>
+            <tr>
+                <td><strong>Column Schema</strong></td>
+                <td><code>['label', 'domain']</code></td>
+                <td><code>['label', 'domain']</code></td>
+                <td><span class="badge-pass">PASS</span> Standardized 2-column format</td>
+            </tr>
+            <tr>
+                <td><strong>Ground-Truth Labels</strong></td>
+                <td>Strictly <code>{0, 1}</code></td>
+                <td>Strictly <code>{0, 1}</code></td>
+                <td><span class="badge-pass">PASS</span> Zero corrupted/non-binary labels</td>
+            </tr>
+            <tr>
+                <td><strong>Missing Labels</strong></td>
+                <td><strong>0</strong> (0.00%)</td>
+                <td><strong>0</strong> (0.00%)</td>
+                <td><span class="badge-pass">PASS</span> No imputation needed</td>
+            </tr>
+            <tr>
+                <td><strong>Missing Domains</strong></td>
+                <td><strong>0</strong> (0.00%)</td>
+                <td><strong>0</strong> (0.00%)</td>
+                <td><span class="badge-pass">PASS</span> Complete domain records</td>
+            </tr>
+            <tr>
+                <td><strong>Empty Strings</strong></td>
+                <td><strong>0</strong> (0.00%)</td>
+                <td><strong>0</strong> (0.00%)</td>
+                <td><span class="badge-pass">PASS</span> No blank queries after cleaning</td>
+            </tr>
+            <tr>
+                <td><strong>Duplicate Domains</strong></td>
+                <td>28 records (0.19%)</td>
+                <td>8 records (0.16%)</td>
+                <td><em>Reported &amp; preserved per Day 2 scope</em></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Class Distribution -->
+    <h2>6. Class Distribution Analysis</h2>
+    <p>
+        In real-world networks, attack traffic is often severely imbalanced. Here, both datasets exhibit a deliberate <strong>80% Tunnel / 20% Benign</strong> ratio:
+    </p>
+    <table>
+        <thead>
+            <tr>
+                <th>Dataset</th>
+                <th>Total Records</th>
+                <th>Regular / Benign (<code>0</code>)</th>
+                <th>DNS Tunnel (<code>1</code>)</th>
+                <th>Ratio Match</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Training Set</strong></td>
+                <td>15,000</td>
+                <td><strong>3,000</strong> (20.0%)</td>
+                <td><strong>12,000</strong> (80.0%)</td>
+                <td><span class="badge-pass">EXACT MATCH (80 / 20)</span></td>
+            </tr>
+            <tr>
+                <td><strong>Validation Set</strong></td>
+                <td>5,000</td>
+                <td><strong>1,000</strong> (20.0%)</td>
+                <td><strong>4,000</strong> (80.0%)</td>
+                <td><span class="badge-pass">EXACT MATCH (80 / 20)</span></td>
+            </tr>
+        </tbody>
+    </table>
+    <div class="callout">
+        <strong>Academic Review Note:</strong> The identical 80/20 class proportions across training and validation ensure stratified, unbiased evaluation during Day 4 and Day 5 testing.
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- Textual Length Statistics -->
+    <h2>7. Textual Domain Length Characteristics</h2>
+    <p>
+        Prior to feature extraction, basic length statistics confirm fundamental differences in payload structure:
+    </p>
+    <table>
+        <thead>
+            <tr>
+                <th>Metric</th>
+                <th>Training Set</th>
+                <th>Validation Set</th>
+                <th>Cybersecurity Insight</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Minimum Length</strong></td>
+                <td><strong>4</strong> characters</td>
+                <td><strong>4</strong> characters</td>
+                <td>Shortest benign domains (e.g., <code>t.co</code>)</td>
+            </tr>
+            <tr>
+                <td><strong>Maximum Length</strong></td>
+                <td><strong>245</strong> characters</td>
+                <td><strong>245</strong> characters</td>
+                <td>Close to DNS RFC maximum limit (253 characters)</td>
+            </tr>
+            <tr>
+                <td><strong>Average (Mean)</strong></td>
+                <td><strong>123.89</strong> characters</td>
+                <td><strong>124.18</strong> characters</td>
+                <td>High mean reflects massive data exfiltration payloads</td>
+            </tr>
+            <tr>
+                <td><strong>Median Length</strong></td>
+                <td><strong>137.0</strong> characters</td>
+                <td><strong>138.0</strong> characters</td>
+                <td>Confirms that the majority of queries carry long encoded data</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Console Output Log -->
+    <h2>8. Execution Output Log (<code>main.py</code>)</h2>
+    <div class="code-box">======================================================================
+  DNS TUNNELING DETECTION - DAY 2 DATA PIPELINE
+======================================================================
+STEP 1: DATASET INGESTION
+  [Loader] Successfully loaded 'training.csv': 15,000 records.
+  [Loader] Successfully loaded 'validating.csv': 5,000 records.
+
+STEP 2: DOMAIN SANITIZATION
+  [Preprocess] Sanitization completed for both training and validation sets.
+  Sample 1: q+Z8AnwaBA.hidemyself.org. -> q+Z8AnwaBA.hidemyself.org
+
+STEP 3: DATA VALIDATION & INTEGRITY CHECKS
+  Training Set:   15,000 records | Labels=[0, 1] | Nulls=0 | Empty=0 -> [PASS]
+  Validation Set: 5,000 records  | Labels=[0, 1] | Nulls=0 | Empty=0 -> [PASS]
+
+STEP 4: CLASS DISTRIBUTION ANALYSIS
+  Training Set:   3,000 Benign (20.0%) | 12,000 Tunnel (80.0%) -> [MATCHES EXPECTED]
+  Validation Set: 1,000 Benign (20.0%) | 4,000 Tunnel (80.0%)  -> [MATCHES EXPECTED]
+
+STEP 5: BASIC DOMAIN-LENGTH STATISTICS
+  Training Set:   Min=4 | Max=245 | Avg=123.89 | Median=137.0
+  Validation Set: Min=4 | Max=245 | Avg=124.18 | Median=138.0
+
+======================================================================
+  DAY 2 VERIFICATION VERDICT: [SUCCESS] ALL CHECKS PASSED!
+======================================================================</div>
+
+    <!-- Roadmap to Day 3 -->
+    <h2>9. Next Phase: Roadmap to Day 3</h2>
+    <p>With data ingestion and quality validation completed, the project is primed for Day 3:</p>
+    <ul>
+        <li><strong>Shannon Entropy (<code>src/entropy.py</code>):</strong> Quantifying character randomness to identify Base32/Base64/Hex encoded tunneling payloads.</li>
+        <li><strong>Lexical Feature Extraction (<code>src/feature_extraction.py</code>):</strong> Extracting domain length, subdomain counts, digit ratios, and consonant-to-vowel ratios.</li>
+        <li><strong>Feature Dataset Construction:</strong> Assembling numerical feature matrices \(X_{\text{train}}\) and \(X_{\text{val}}\) ready for classifier training.</li>
+    </ul>
+
+    <div class="footer">
+        <span>DNS Tunneling Detection Project &mdash; Day 2 Progress Summary</span>
+        <span>Prepared for Academic &amp; Departmental Review</span>
+    </div>
+
+</body>
+</html>
