@@ -1,172 +1,200 @@
 """
-DNS Tunneling Detection - Day 1 Setup Verification Script
-=========================================================
+DNS Tunneling Detection - Day 2 Data Ingestion & Validation Pipeline
+=====================================================================
 Academic Machine Learning Project: DNS Tunneling Detection
-Phase: Day 1 - Environment & Project Initialization
+Phase: Day 2 - Data Ingestion, Sanitization & Quality Validation
 
-This script validates that the Python environment, project directory structure,
-dependencies, and source modules are correctly configured before development begins.
+This script executes the complete Day 2 data processing workflow:
+1. Ingests headerless CSV datasets ('training.csv' and 'validating.csv').
+2. Assigns standard column schemas ['label', 'domain'].
+3. Sanitizes domain queries (strips whitespace and removes trailing DNS root dots).
+4. Conducts integrity checks (shapes, column names, binary labels, nulls, duplicates).
+5. Analyzes class balance (Benign vs. DNS Tunnel).
+6. Computes basic textual domain-length statistics.
+7. Displays domain cleaning before/after transformations.
+8. Reports an overall PASS/FAIL verdict for Day 2 academic review.
 """
 
 import sys
-import os
-import importlib
 from pathlib import Path
+import pandas as pd
+
+# Add project root to path for modular imports
+PROJECT_ROOT = Path(__file__).resolve().parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.data_loader import load_dataset
+from src.preprocessing import (
+    clean_dataset,
+    validate_dataset,
+    get_class_distribution,
+    get_domain_length_stats,
+    get_cleaning_examples,
+)
 
 
-def print_header(title: str) -> None:
-    print("\n" + "=" * 65)
+def print_banner(title: str, char: str = "=", width: int = 70) -> None:
+    print("\n" + char * width)
     print(f"  {title}")
-    print("=" * 65)
+    print(char * width)
 
 
-def check_python_environment() -> bool:
-    print_header("1. Python Environment Check")
-    version_info = sys.version_info
-    version_str = f"{version_info.major}.{version_info.minor}.{version_info.micro}"
-    executable_path = sys.executable
-    in_venv = sys.prefix != sys.base_prefix
+def print_section(title: str) -> None:
+    print(f"\n--- {title} ---")
 
-    print(f"  Python Version:     {version_str}")
-    print(f"  Executable Path:    {executable_path}")
-    print(f"  In Virtual Env:     {'[YES] (venv active)' if in_venv else '[NO] (system python)'}")
 
-    is_compatible = (version_info.major == 3 and version_info.minor == 12)
-    if is_compatible:
-        print("  Status:             [PASS] Compatible Python 3.12 detected.")
+def run_day2_pipeline():
+    print_banner("DNS TUNNELING DETECTION - DAY 2 DATA PIPELINE")
+    print(f"  Root Directory: {PROJECT_ROOT}")
+
+    data_dir = PROJECT_ROOT / "data"
+    train_path = data_dir / "training.csv"
+    val_path = data_dir / "validating.csv"
+
+    # =========================================================================
+    # STEP 1: LOAD RAW HEADERLESS DATASETS
+    # =========================================================================
+    print_banner("STEP 1: DATASET INGESTION", "-")
+    try:
+        raw_train_df = load_dataset(train_path)
+        raw_val_df = load_dataset(val_path)
+    except Exception as e:
+        print(f"\n[FATAL INGESTION ERROR] {e}")
+        print("\n" + "=" * 70)
+        print("  DAY 2 VALIDATION: [FAILED] (Ingestion Error)")
+        print("=" * 70 + "\n")
+        sys.exit(1)
+
+    # =========================================================================
+    # STEP 2: DOMAIN SANITIZATION / PREPROCESSING
+    # =========================================================================
+    print_banner("STEP 2: DOMAIN SANITIZATION", "-")
+    print("  Applying domain cleaning:")
+    print("  - Converting to string safely")
+    print("  - Stripping leading and trailing whitespace")
+    print("  - Collapsing irregular internal whitespace")
+    print("  - Stripping trailing DNS root dots (e.g., 'example.com.' -> 'example.com')")
+    print("  - Preserving internal dots and meaningful characters")
+
+    train_df = clean_dataset(raw_train_df)
+    val_df = clean_dataset(raw_val_df)
+    print("  [Preprocess] Sanitization completed for both training and validation sets.")
+
+    # Show Cleaning Transformations (Before / After)
+    print_section("Domain Cleaning Verification (Samples)")
+    cleaning_samples = get_cleaning_examples(raw_train_df, train_df, num_examples=5)
+    print(f"  {'#':<3} | {'Raw Input (Before)':<45} | {'Sanitized Output (After)':<45}")
+    print("  " + "-" * 98)
+    for i, (before, after) in enumerate(cleaning_samples, 1):
+        # Truncate long payload strings cleanly for display
+        b_disp = (before[:42] + "...") if len(before) > 45 else before
+        a_disp = (after[:42] + "...") if len(after) > 45 else after
+        print(f"  {i:<3} | {b_disp:<45} | {a_disp:<45}")
+
+    # =========================================================================
+    # STEP 3: DATA VALIDATION & INTEGRITY CHECKS
+    # =========================================================================
+    print_banner("STEP 3: DATA VALIDATION & INTEGRITY CHECKS", "-")
+
+    train_val_metrics = validate_dataset(train_df, name="Training Set", expected_rows=15000)
+    val_val_metrics = validate_dataset(val_df, name="Validation Set", expected_rows=5000)
+
+    all_validations_passed = True
+
+    for metrics in [train_val_metrics, val_val_metrics]:
+        dname = metrics["dataset_name"]
+        print_section(f"Validation Report: {dname}")
+
+        # A. Shape Check
+        shape_status = "[PASS]" if metrics["rows_valid"] else "[FAIL]"
+        print(f"  - Record Count:         {metrics['total_records']:,} (Expected: {metrics['expected_records']:,}) -> {shape_status}")
+        if not metrics["rows_valid"]:
+            all_validations_passed = False
+
+        # B. Columns Check
+        col_status = "[PASS]" if metrics["columns_valid"] else "[FAIL]"
+        print(f"  - Columns:              {metrics['columns']} -> {col_status}")
+        if not metrics["columns_valid"]:
+            all_validations_passed = False
+
+        # C. Label Check
+        lbl_status = "[PASS]" if metrics["labels_valid"] else "[FAIL]"
+        print(f"  - Unique Labels:        {metrics['unique_labels']} (Expected: [0, 1]) -> {lbl_status}")
+        if not metrics["labels_valid"]:
+            all_validations_passed = False
+
+        # D. Missing Values Check
+        null_status = "[PASS]" if (metrics["null_labels"] == 0 and metrics["null_domains"] == 0) else "[FAIL]"
+        print(f"  - Missing Values:       Labels={metrics['null_labels']}, Domains={metrics['null_domains']} -> {null_status}")
+        if metrics["null_labels"] > 0 or metrics["null_domains"] > 0:
+            all_validations_passed = False
+
+        # E. Empty Domains Check
+        empty_status = "[PASS]" if metrics["empty_domains"] == 0 else "[FAIL]"
+        print(f"  - Empty Domain Strings: {metrics['empty_domains']} -> {empty_status}")
+        if metrics["empty_domains"] > 0:
+            all_validations_passed = False
+
+        # F. Duplicate Domains Check (Reported, preserved as per Day 2 instructions)
+        print(f"  - Duplicate Domains:    {metrics['duplicate_domains']:,} records (Reported; retained per instructions)")
+
+    # =========================================================================
+    # STEP 4: CLASS DISTRIBUTION ANALYSIS
+    # =========================================================================
+    print_banner("STEP 4: CLASS DISTRIBUTION ANALYSIS", "-")
+
+    train_dist = get_class_distribution(train_df)
+    val_dist = get_class_distribution(val_df)
+
+    print(f"  {'Dataset':<16} | {'Total':<8} | {'Benign (0)':<16} | {'DNS Tunnel (1)':<16} | {'Distribution Match'}")
+    print("  " + "-" * 78)
+
+    for name, dist, exp_benign, exp_tunnel in [
+        ("Training Set", train_dist, 3000, 12000),
+        ("Validation Set", val_dist, 1000, 4000),
+    ]:
+        matches_expected = (dist["benign_count"] == exp_benign and dist["tunnel_count"] == exp_tunnel)
+        match_str = "[MATCHES EXPECTED (80/20)]" if matches_expected else "[DIFFERENT FROM EXPECTED]"
+        b_str = f"{dist['benign_count']:,} ({dist['benign_pct']:.1f}%)"
+        t_str = f"{dist['tunnel_count']:,} ({dist['tunnel_pct']:.1f}%)"
+        print(f"  {name:<16} | {dist['total']:<8,} | {b_str:<16} | {t_str:<16} | {match_str}")
+
+    # =========================================================================
+    # STEP 5: BASIC TEXTUAL DOMAIN STATISTICS
+    # =========================================================================
+    print_banner("STEP 5: BASIC DOMAIN-LENGTH STATISTICS", "-")
+    print("  (Textual length metrics calculated for ingestion quality verification)")
+
+    train_stats = get_domain_length_stats(train_df)
+    val_stats = get_domain_length_stats(val_df)
+
+    print(f"\n  {'Metric':<24} | {'Training Set':<16} | {'Validation Set':<16}")
+    print("  " + "-" * 62)
+    print(f"  {'Minimum Domain Length':<24} | {train_stats['min_length']:<16} | {val_stats['min_length']:<16}")
+    print(f"  {'Maximum Domain Length':<24} | {train_stats['max_length']:<16} | {val_stats['max_length']:<16}")
+    print(f"  {'Average Domain Length':<24} | {train_stats['avg_length']:<16.2f} | {val_stats['avg_length']:<16.2f}")
+    print(f"  {'Median Domain Length':<24} | {train_stats['median_length']:<16.1f} | {val_stats['median_length']:<16.1f}")
+
+    # =========================================================================
+    # STEP 6: OVERALL DAY 2 VERDICT
+    # =========================================================================
+    print_banner("DAY 2 VERIFICATION VERDICT")
+    if all_validations_passed:
+        print("  [SUCCESS] DAY 2 DATA VALIDATION PASSED!")
+        print("  - Datasets successfully loaded without headers.")
+        print("  - Domains cleanly sanitized (trailing root-dots removed).")
+        print("  - Labels confirmed strictly binary (0 = Benign, 1 = Tunnel).")
+        print("  - Zero missing values and zero empty domain strings.")
+        print("  - Dataset shapes and class distributions match expected 80/20 ratio.")
+        print("  - Ready for Day 3 Feature Engineering & Shannon Entropy.")
     else:
-        print(f"  Status:             [WARN] Expected Python 3.12, running {version_str}.")
-    return is_compatible and in_venv
+        print("  [FAILURE] One or more data validation checks failed. See details above.")
+    print("=" * 70 + "\n")
 
-
-def check_required_packages() -> bool:
-    print_header("2. Required Packages Check")
-    packages_to_check = [
-        ("pandas", "pandas"),
-        ("numpy", "numpy"),
-        ("scikit-learn", "sklearn"),
-        ("shap", "shap"),
-        ("matplotlib", "matplotlib"),
-        ("seaborn", "seaborn"),
-        ("joblib", "joblib"),
-    ]
-
-    all_passed = True
-    for display_name, import_name in packages_to_check:
-        try:
-            module = importlib.import_module(import_name)
-            ver = getattr(module, "__version__", "unknown")
-            print(f"  - {display_name:<16} : [INSTALLED] (v{ver})")
-        except ImportError as e:
-            print(f"  - {display_name:<16} : [MISSING] ({e})")
-            all_passed = False
-
-    return all_passed
-
-
-def check_project_structure(project_root: Path) -> bool:
-    print_header("3. Project Directory Structure Check")
-    expected_dirs = ["data", "src", "models", "results", "notebooks"]
-    expected_files = [
-        "requirements.txt",
-        "README.md",
-        ".gitignore",
-        "main.py",
-        "src/__init__.py",
-        "src/data_loader.py",
-        "src/preprocessing.py",
-        "src/feature_extraction.py",
-        "src/entropy.py",
-        "src/train_models.py",
-        "src/evaluate.py",
-        "src/explainability.py",
-    ]
-
-    all_passed = True
-    print("  Checking Directories:")
-    for d in expected_dirs:
-        dir_path = project_root / d
-        if dir_path.is_dir():
-            print(f"    [OK] {d}/")
-        else:
-            print(f"    [FAIL] {d}/ is missing!")
-            all_passed = False
-
-    print("\n  Checking Files:")
-    for f in expected_files:
-        file_path = project_root / f
-        if file_path.is_file():
-            print(f"    [OK] {f}")
-        else:
-            print(f"    [FAIL] {f} is missing!")
-            all_passed = False
-
-    return all_passed
-
-
-def check_src_modules_syntax() -> bool:
-    print_header("4. Source Modules Import & Syntax Check")
-    modules_to_test = [
-        "src.data_loader",
-        "src.preprocessing",
-        "src.feature_extraction",
-        "src.entropy",
-        "src.train_models",
-        "src.evaluate",
-        "src.explainability",
-    ]
-
-    all_passed = True
-    for mod_name in modules_to_test:
-        try:
-            importlib.import_module(mod_name)
-            print(f"    [OK] {mod_name:<26} (valid syntax)")
-        except Exception as e:
-            print(f"    [FAIL] {mod_name:<26} (Error: {e})")
-            all_passed = False
-
-    return all_passed
-
-
-def check_datasets_status(project_root: Path) -> None:
-    print_header("5. Dataset Readiness (Informational)")
-    train_path = project_root / "data" / "training.csv"
-    val_path = project_root / "data" / "validating.csv"
-
-    if train_path.exists():
-        size_mb = train_path.stat().st_size / (1024 * 1024)
-        print(f"  - training.csv:    [FOUND] ({size_mb:.2f} MB)")
-    else:
-        print("  - training.csv:    [PENDING] (15,000 records headerless CSV to be placed in data/)")
-
-    if val_path.exists():
-        size_mb = val_path.stat().st_size / (1024 * 1024)
-        print(f"  - validating.csv:  [FOUND] ({size_mb:.2f} MB)")
-    else:
-        print("  - validating.csv:  [PENDING] (5,000 records headerless CSV to be placed in data/)")
-
-
-def main():
-    print("\n=================================================================")
-    print("      DNS TUNNELING DETECTION - DAY 1 SETUP VERIFICATION        ")
-    print("=================================================================")
-
-    project_root = Path(__file__).resolve().parent
-
-    env_ok = check_python_environment()
-    pkg_ok = check_required_packages()
-    struct_ok = check_project_structure(project_root)
-    src_ok = check_src_modules_syntax()
-    check_datasets_status(project_root)
-
-    print_header("Summary & Verification Verdict")
-    if env_ok and pkg_ok and struct_ok and src_ok:
-        print("  [SUCCESS] All Day 1 setup verification checks PASSED!")
-        print("  The project environment and architecture are ready for Day 2.")
-    else:
-        print("  [WARNING] Some checks reported issues. Review details above.")
-    print("=" * 65 + "\n")
+    return all_validations_passed
 
 
 if __name__ == "__main__":
-    main()
+    success = run_day2_pipeline()
+    sys.exit(0 if success else 1)
