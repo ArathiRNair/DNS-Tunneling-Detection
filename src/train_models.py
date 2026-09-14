@@ -80,3 +80,37 @@ def train_gradient_boosting(X_train: pd.DataFrame, y_train: pd.Series, random_st
     model.fit(X_train, y_train)
     
     return model
+
+
+from sklearn.ensemble import HistGradientBoostingClassifier
+
+def train_hist_gradient_boosting(X_train: pd.DataFrame, y_train: pd.Series, random_state: int = 42) -> HistGradientBoostingClassifier:
+    """
+    Trains a Histogram-based Gradient Boosting Classifier.
+
+    This estimator is much faster than GradientBoostingClassifier for big datasets,
+    as it bins the data into integer-valued bins (histograms).
+
+    Parameters:
+    -----------
+    X_train : pd.DataFrame
+        The training feature matrix (should contain exactly 8 features).
+    y_train : pd.Series
+        The training labels (0 = Benign, 1 = Tunnel).
+    random_state : int, optional
+        Seed for reproducibility (default is 42).
+
+    Returns:
+    --------
+    HistGradientBoostingClassifier
+        The trained scikit-learn HistGradientBoosting model.
+    """
+    model = HistGradientBoostingClassifier(
+        random_state=random_state,
+        max_iter=100
+    )
+    
+    # Train the model
+    model.fit(X_train, y_train)
+    
+    return model
