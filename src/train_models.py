@@ -114,3 +114,15 @@ def train_hist_gradient_boosting(X_train: pd.DataFrame, y_train: pd.Series, rand
     model.fit(X_train, y_train)
     
     return model
+
+import joblib
+from pathlib import Path
+
+def save_model(model, file_path: str):
+    path = Path(file_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    joblib.dump(model, path)
+
+def load_model(file_path: str):
+    return joblib.load(file_path)
+
