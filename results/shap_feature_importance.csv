@@ -1,0 +1,9 @@
+Feature,Mean_Absolute_SHAP
+subdomain_length,0.146187005553143
+domain_length,0.11277393356600723
+label_count,0.08869434342264683
+subdomain_entropy,0.05646680010108166
+domain_entropy,0.04756048515203799
+digit_count,0.028231849478316435
+digit_ratio,0.022656844620327663
+special_char_count,0.004361393247859555
