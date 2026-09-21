@@ -7,7 +7,7 @@ function App() {
   const [errorMsg, setErrorMsg] = useState('');
   const [result, setResult] = useState(null);
 
-  const handleDetect = () => {
+  const handleDetect = async () => {
     if (!domain.trim()) {
       setErrorMsg('Please enter a domain string.');
       setStatus('error');
@@ -18,30 +18,33 @@ function App() {
     setErrorMsg('');
     setResult(null);
 
-    // DAY 7: Simulate backend latency. 
-    // The actual fetch to POST /predict will be implemented in Day 8.
-    setTimeout(() => {
-      // Mock data for UI demonstration purposes
-      const isTunnel = domain.length > 20; // Simple mock logic for demonstration
-      
-      setResult({
-        sanitized_domain: domain.trim(),
-        prediction: isTunnel ? 1 : 0,
-        status: isTunnel ? "Tunnel" : "Benign",
-        confidence_tunnel: isTunnel ? 0.98 : 0.02,
-        features: {
-          domain_length: domain.length,
-          subdomain_length: Math.max(0, domain.length - 10),
-          label_count: domain.split('.').length,
-          digit_count: (domain.match(/\d/g) || []).length,
-          digit_ratio: (domain.match(/\d/g) || []).length / (domain.length || 1),
-          special_char_count: (domain.match(/[^a-zA-Z0-9.]/g) || []).length,
-          domain_entropy: 3.45,
-          subdomain_entropy: 2.15
-        }
+    // DAY 8: Real asynchronous request to the FastAPI endpoint
+    try {
+      const response = await fetch('http://127.0.0.1:8000/predict', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ domain: domain.trim() }),
       });
+
+      if (!response.ok) {
+        // Handle non-200 responses (e.g., 400 Bad Request if validation fails on the backend)
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Server error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setResult(data);
       setStatus('success');
-    }, 1000);
+    } catch (err) {
+      // Handles network failure, backend unavailability, or thrown errors
+      console.error("API Connection Error:", err);
+      setErrorMsg(err.message === "Failed to fetch" 
+        ? "Unable to connect to the backend server. Please ensure the FastAPI server is running." 
+        : err.message);
+      setStatus('error');
+    }
   };
 
   return (

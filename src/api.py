@@ -5,6 +5,7 @@ Exposes the Day 6 live domain prediction pipeline to a future frontend.
 """
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from src.predict import predict_domain
 
@@ -12,6 +13,15 @@ app = FastAPI(
     title="DNS Tunneling Detection API",
     description="Academic API exposing the Random Forest live domain prediction pipeline.",
     version="1.0.0"
+)
+
+# Configure CORS for local React/Vite frontend development
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 class PredictionRequest(BaseModel):
